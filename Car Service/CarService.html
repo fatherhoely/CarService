@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Service DApp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px 0 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #28a745;
+            color: #fff;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #218838;
+        }
+        .request-list {
+            margin-top: 20px;
+        }
+        .request-item {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Car Service DApp</h1>
+        <form id="serviceRequestForm">
+            <label for="make">Car Make</label>
+            <input type="text" id="make" required>
+            <label for="model">Car Model</label>
+            <input type="text" id="model" required>
+            <label for="year">Car Year</label>
+            <input type="number" id="year" required>
+            <label for="problemDescription">Problem Description</label>
+            <input type="text" id="problemDescription" required>
+            <label for="carID">Car ID</label>
+            <input type="number" id="carID" required>
+            <button type="submit">Submit Service Request</button>
+        </form>
+        <div class="request-list" id="requestList">
+            <h2>Service Requests</h2>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.3/dist/web3.min.js"></script>
+    <script>
+        const contractAddress = 'YOUR_CONTRACT_ADDRESS';
+        const contractABI = [ /* ABI JSON from Remix */ ];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (window.ethereum) {
+                window.web3 = new Web3(window.ethereum);
+                await window.ethereum.enable();
+            } else {
+                alert('Please install MetaMask!');
+                return;
+            }
+
+            const contract = new web3.eth.Contract(contractABI, contractAddress);
+            const accounts = await web3.eth.getAccounts();
+            const account = accounts[0];
+
+            document.getElementById('serviceRequestForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const make = document.getElementById('make').value;
+                const model = document.getElementById('model').value;
+                const year = document.getElementById('year').value;
+                const problemDescription = document.getElementById('problemDescription').value;
+                const carID = document.getElementById('carID').value;
+
+                await contract.methods.requestService(make, model, year, problemDescription, carID).send({ from: account });
+                alert('Service request submitted!');
+                loadRequests();
+            });
+
+            const loadRequests = async () => {
+                const requestCount = await contract.methods.requestCount().call();
+                const requestList = document.getElementById('requestList');
+                requestList.innerHTML = '<h2>Service Requests</h2>';
+
+                for (let i = 1; i <= requestCount; i++) {
+                    const request = await contract.methods.getServiceRequest(i).call();
+                    const item = document.createElement('div');
+                    item.className = 'request-item';
+                    item.innerHTML = `
+                        <p>Request ID: ${request.requestID}</p>
+                        <p>Customer: ${request.customer}</p>
+                        <p>Make: ${request.carDetails.make}</p>
+                        <p>Model: ${request.carDetails.model}</p>
+                        <p>Year: ${request.carDetails.year}</p>
+                        <p>Problem: ${request.carDetails.problemDescription}</p>
+                        <p>Car ID: ${request.carDetails.carID}</p>
+                        <p>Status: ${request.isCompleted ? 'Completed' : 'Pending'}</p>
+                    `;
+                    requestList.appendChild(item);
+                }
+            };
+
+            loadRequests();
+        });
+    </script>
+</body>
+</html>
